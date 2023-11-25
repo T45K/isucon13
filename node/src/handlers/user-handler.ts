@@ -55,7 +55,7 @@ export const getIconHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -92,7 +92,7 @@ export const postIconHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -133,7 +133,7 @@ export const getMeHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -210,7 +210,7 @@ export const registerHandler = async (
     return c.text(`Internal Server Error\n${error}`, 500)
   } finally {
     // await conn.rollback()
-    conn.release()
+    await conn.release()
   }
 }
 
@@ -266,7 +266,7 @@ export const loginHandler = async (
     return c.text(`Internal Server Error\n${error}`, 500)
   } finally {
     // await conn.rollback()
-    conn.release()
+    await conn.release()
   }
 }
 
@@ -306,7 +306,7 @@ export const getUserHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]

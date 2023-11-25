@@ -62,7 +62,7 @@ export const getLivecommentsHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -106,7 +106,7 @@ export const getNgwords = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -200,7 +200,7 @@ export const postLivecommentHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -279,7 +279,7 @@ export const reportLivecommentHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -374,7 +374,7 @@ export const moderateHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]

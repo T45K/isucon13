@@ -141,7 +141,7 @@ export const reserveLivestreamHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -233,7 +233,7 @@ export const searchLivestreamsHandler = async (
     return c.text(`Internal Server Error\n${error}`, 500)
   } finally {
     // await conn.rollback()
-    conn.release()
+    await conn.release()
   }
 }
 
@@ -273,7 +273,7 @@ export const getMyLivestreamsHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -325,7 +325,7 @@ export const getUserLivestreamsHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -362,7 +362,7 @@ export const enterLivestreamHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -399,7 +399,7 @@ export const exitLivestreamHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -442,7 +442,7 @@ export const getLivestreamHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -498,7 +498,7 @@ export const getLivecommentReportsHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]

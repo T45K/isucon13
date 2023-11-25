@@ -1,5 +1,5 @@
 import {Context} from 'hono'
-import {RowDataPacket} from 'mysql2/promise'
+import {Pool, RowDataPacket} from 'mysql2/promise'
 import {HonoEnvironment} from '../types/application'
 import {verifyUserSessionMiddleware} from '../middlewares/verify-user-session-middleare'
 import {throwErrorWith} from '../utils/throw-error-with'
@@ -14,7 +14,7 @@ export const getUserStatisticsHandler = [
     // ユーザごとに、紐づく配信について、累計リアクション数、累計ライブコメント数、累計売上金額を算出
     // また、現在の合計視聴者数もだす
 
-    const conn = await c.get('pool').getConnection()
+    const conn = await (c.get('pool') as Pool).getConnection()
     await conn.beginTransaction()
 
     try {
@@ -183,7 +183,7 @@ export const getUserStatisticsHandler = [
       return c.text(`Internal Server Error\n${error} ${error.stack}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]
@@ -306,7 +306,7 @@ export const getLivestreamStatisticsHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      conn.release()
+      await conn.release()
     }
   },
 ]

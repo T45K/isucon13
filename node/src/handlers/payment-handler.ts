@@ -25,6 +25,6 @@ export const GetPaymentResult = async (
     return c.text(`Internal Server Error\n${error}`, 500)
   } finally {
     // await conn.rollback()
-    conn.release()
+    await conn.release()
   }
 }
