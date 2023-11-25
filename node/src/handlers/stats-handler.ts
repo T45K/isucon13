@@ -35,14 +35,11 @@ export const getUserStatisticsHandler = [
         .query<(UserModel & RowDataPacket)[]>('SELECT * FROM users')
         .catch(throwErrorWith('failed to get users'))
 
-      let [livestreams] = await conn
+      const [livestreams] = await conn
         .query<(LivestreamsModel & RowDataPacket)[]>(
           'SELECT * FROM livestreams',
         )
         .catch(throwErrorWith('failed to get users'))
-      if (!livestreams) {
-        livestreams = []
-      }
 
       const livestreamsByUserId: { [key: number]: LivestreamsModel[] } = {}
       // livestreamsをuser_idでグルーピングする
@@ -54,12 +51,9 @@ export const getUserStatisticsHandler = [
       }
 
       // 全てのreactionをDBから取得
-      let [reactions] = await conn
+      const [reactions] = await conn
         .query<(ReactionsModel & RowDataPacket)[]>('SELECT * FROM reactions')
         .catch(throwErrorWith('failed to get reactions'))
-      if (!reactions) {
-        reactions = []
-      }
       // reactionをlivestream_idでグルーピングする
       const reactionsByLivestreamId: { [key: number]: ReactionsModel[] } = {}
       for (const reaction of reactions) {
@@ -70,14 +64,11 @@ export const getUserStatisticsHandler = [
       }
 
       // 全てのlivecommentをDBから取得
-      let [livecomments] = await conn
+      const [livecomments] = await conn
         .query<(LivecommentsModel & RowDataPacket)[]>(
           'SELECT * FROM livecomments',
         )
         .catch(throwErrorWith('failed to get livecomments'))
-      if (!livecomments) {
-        livecomments = []
-      }
       // livecommentをlivestream_idでグルーピング
       const livecommentsByLivestreamId: {
         [key: number]: LivecommentsModel[]
@@ -188,7 +179,7 @@ export const getUserStatisticsHandler = [
       })
     } catch (error) {
       await conn.rollback()
-      return c.text(`Internal Server Error\n${error}}`, 500)
+      return c.text(`Internal Server Error\n${error} ${error.stack}`, 500)
     } finally {
       await conn.rollback()
       conn.release()
