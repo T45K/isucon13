@@ -35,39 +35,86 @@ export const getUserStatisticsHandler = [
         .query<(UserModel & RowDataPacket)[]>('SELECT * FROM users')
         .catch(throwErrorWith('failed to get users'))
 
-      const ranking: { username: string; score: number }[] = []
-      for (const user of users) {
-        const [[{ 'COUNT(*)': reaction }]] = await conn
-          .query<({ 'COUNT(*)': number } & RowDataPacket)[]>(
-            `
-                            SELECT COUNT(*)
-                            FROM users u
-                                     INNER JOIN livestreams l ON l.user_id = u.id
-                                     INNER JOIN reactions r ON r.livestream_id = l.id
-                            WHERE u.id = ?
-                        `,
-            [user.id],
-          )
-          .catch(throwErrorWith('failed to count reactions'))
+      const [livestreams] = await conn
+        .query<(LivestreamsModel & RowDataPacket)[]>(
+          'SELECT * FROM livestreams',
+        )
+        .catch(throwErrorWith('failed to get users'))
 
-        const [[{ 'IFNULL(SUM(l2.tip), 0)': tips }]] = await conn
-          .query<
-            ({ 'IFNULL(SUM(l2.tip), 0)': string | number } & RowDataPacket)[]
-          >(
-            `
-                            SELECT IFNULL(SUM(l2.tip), 0)
-                            FROM users u
-                                     INNER JOIN livestreams l ON l.user_id = u.id
-                                     INNER JOIN livecomments l2 ON l2.livestream_id = l.id
-                            WHERE u.id = ?
-                        `,
-            [user.id],
-          )
-          .catch(throwErrorWith('failed to count tips'))
+      const livestreamsByUserId: { [key: number]: LivestreamsModel[] } = {}
+      // livestreamsをuser_idでグルーピングする
+      for (const livestream of livestreams) {
+        if (!livestreamsByUserId[livestream.user_id]) {
+          livestreamsByUserId[livestream.user_id] = []
+        }
+        livestreamsByUserId[livestream.user_id].push(livestream)
+      }
+
+      // 全てのreactionをDBから取得
+      const [reactions] = await conn
+        .query<(ReactionsModel & RowDataPacket)[]>('SELECT * FROM reactions')
+        .catch(throwErrorWith('failed to get reactions'))
+      // reactionをlivestream_idでグルーピングする
+      const reactionsByLivestreamId: { [key: number]: ReactionsModel[] } = {}
+      for (const reaction of reactions) {
+        if (!reactionsByLivestreamId[reaction.livestream_id]) {
+          reactionsByLivestreamId[reaction.livestream_id] = []
+        }
+        reactionsByLivestreamId[reaction.livestream_id].push(reaction)
+      }
+
+      // 全てのlivecommentをDBから取得
+      const [livecomments] = await conn
+        .query<(LivecommentsModel & RowDataPacket)[]>(
+          'SELECT * FROM livecomments',
+        )
+        .catch(throwErrorWith('failed to get livecomments'))
+      // livecommentをlivestream_idでグルーピング
+      const livecommentsByLivestreamId: {
+        [key: number]: LivecommentsModel[]
+      } = {}
+      for (const livecomment of livecomments) {
+        if (!livecommentsByLivestreamId[livecomment.livestream_id]) {
+          livecommentsByLivestreamId[livecomment.livestream_id] = []
+        }
+        livecommentsByLivestreamId[livecomment.livestream_id].push(livecomment)
+      }
+
+      const ranking: { username: string; score: number }[] = []
+      let totalReactions = 0
+      let totalLivecomments = 0
+      let totalTip = 0
+      for (const user of users) {
+        const livestreams = livestreamsByUserId[user.id]
+        if (!livestreams) continue
+
+        let reaction = 0
+        let tips = 0
+        for (const livestream of livestreams) {
+          const livestreamReactions = reactionsByLivestreamId[livestream.id]
+          if (livestreamReactions) {
+            reaction += livestreamReactions.length
+          }
+          if (user.name === username) {
+            totalReactions = reaction
+          }
+
+          const livestreamLivecomments =
+            livecommentsByLivestreamId[livestream.id]
+          if (livestreamLivecomments) {
+            for (const livecomment of livestreamLivecomments) {
+              tips += livecomment.tip
+            }
+          }
+          if (user.name === username) {
+            totalLivecomments = livestreamLivecomments?.length ?? 0
+            totalTip = tips
+          }
+        }
 
         ranking.push({
           username: user.name,
-          score: reaction + Number(tips),
+          score: reaction + tips,
         })
       }
 
@@ -82,48 +129,6 @@ export const getUserStatisticsHandler = [
           break
         }
         rank++
-      }
-
-      // リアクション数
-      const [[{ 'COUNT(*)': totalReactions }]] = await conn
-        .query<({ 'COUNT(*)': number } & RowDataPacket)[]>(
-          `
-                        SELECT COUNT(*)
-                        FROM users u
-                                 INNER JOIN livestreams l ON l.user_id = u.id
-                                 INNER JOIN reactions r ON r.livestream_id = l.id
-                        WHERE u.name = ?
-                    `,
-          [username],
-        )
-        .catch(throwErrorWith('failed to count reactions'))
-
-      // ライブコメント数、チップ合計
-      let totalLivecomments = 0
-      let totalTip = 0
-      const [livestreams] = await conn
-        .query<(LivestreamsModel & RowDataPacket)[]>(
-          `SELECT *
-                     FROM livestreams
-                     WHERE user_id = ?`,
-          [user.id],
-        )
-        .catch(throwErrorWith('failed to get livestreams'))
-
-      for (const livestream of livestreams) {
-        const [livecomments] = await conn
-          .query<(LivecommentsModel & RowDataPacket)[]>(
-            `SELECT *
-                         FROM livecomments
-                         WHERE livestream_id = ?`,
-            [livestream.id],
-          )
-          .catch(throwErrorWith('failed to get livecomments'))
-
-        for (const livecomment of livecomments) {
-          totalTip += livecomment.tip
-          totalLivecomments++
-        }
       }
 
       // 合計視聴者数
