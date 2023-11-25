@@ -252,7 +252,7 @@ export const searchLivestreamsHandler = async (
     const livestreamResponses: LivestreamResponse[] = []
     for (const livestream of livestreams) {
       const user = userById[livestream.user_id]
-      const theme = themes[user.id]
+      const theme = themeByUserId[user.id]
       const image =
         icons[user.id]?.image ?? (await c.get('runtime').fallbackUserIcon())
 
