@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { serve } from '@hono/node-server'
-import { hash, compare } from 'bcrypt'
+import { compare, hash } from 'bcrypt'
 import { createPool } from 'mysql2/promise'
 import { CookieStore, sessionMiddleware } from 'hono-sessions'
 import { Hono } from 'hono'
@@ -14,38 +14,38 @@ import {
 } from './types/application'
 import {
   getLivecommentsHandler,
-  postLivecommentHandler,
   getNgwords,
-  reportLivecommentHandler,
   moderateHandler,
+  postLivecommentHandler,
+  reportLivecommentHandler,
 } from './handlers/livecomment-handler'
 import {
-  reserveLivestreamHandler,
-  searchLivestreamsHandler,
-  getMyLivestreamsHandler,
-  getUserLivestreamsHandler,
-  getLivestreamHandler,
-  getLivecommentReportsHandler,
   enterLivestreamHandler,
   exitLivestreamHandler,
+  getLivecommentReportsHandler,
+  getLivestreamHandler,
+  getMyLivestreamsHandler,
+  getUserLivestreamsHandler,
+  reserveLivestreamHandler,
+  searchLivestreamsHandler,
 } from './handlers/livestream-handler'
 import { GetPaymentResult } from './handlers/payment-handler'
 import {
-  postReactionHandler,
   getReactionsHandler,
+  postReactionHandler,
 } from './handlers/reaction-handler'
 import {
-  getUserStatisticsHandler,
   getLivestreamStatisticsHandler,
+  getUserStatisticsHandler,
 } from './handlers/stats-handler'
-import { getTagHandler, getStreamerThemeHandler } from './handlers/top-handler'
+import { getStreamerThemeHandler, getTagHandler } from './handlers/top-handler'
 import {
-  registerHandler,
-  loginHandler,
+  getIconHandler,
   getMeHandler,
   getUserHandler,
-  getIconHandler,
+  loginHandler,
   postIconHandler,
+  registerHandler,
 } from './handlers/user-handler'
 
 const runtime = {
@@ -134,6 +134,7 @@ app.use('*', async (c, next) => {
 // 初期化
 app.post('/api/initialize', async (c) => {
   try {
+    global.iconHash = {}
     await runtime.exec(['../sql/init.sh'])
     return c.json({ language: 'node' })
   } catch (error) {
