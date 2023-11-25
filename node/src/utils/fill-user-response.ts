@@ -34,6 +34,12 @@ export const fillUserResponse = async (
     image = await getFallbackUserIcon()
   }
 
+  const iconHash = createHash('sha256')
+    .update(new Uint8Array(image))
+    .digest('hex')
+
+  global.iconHash[iconHash] = 'exists'
+
   return {
     id: user.id,
     name: user.name,
