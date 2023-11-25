@@ -5,14 +5,14 @@ import {defaultSessionExpiresKey, defaultUserIDKey, defaultUserNameKey,} from '.
 import {verifyUserSessionMiddleware} from '../middlewares/verify-user-session-middleare'
 import {fillUserResponse} from '../utils/fill-user-response'
 import {throwErrorWith} from '../utils/throw-error-with'
-import {IconModel, UserModel} from '../types/models'
+import {IconModel, UserModel} from '../types/models' // GET /api/user/:username/icon
 
 // GET /api/user/:username/icon
 export const getIconHandler = [
   async (c: Context<HonoEnvironment, '/api/user/:username/icon'>) => {
     const username = c.req.param('username')
-    const ifNoneMatchHeader = c.req.header()['If-None-Match']
-    if (ifNoneMatchHeader && global.iconHash[ifNoneMatchHeader] == 'exists') {
+    const ifNoneMatchHeader = c.req.header('If-None-Match')
+    if (ifNoneMatchHeader && global.iconHash[ifNoneMatchHeader] === 'exists') {
       return c.body(null, 304, {})
     }
 
