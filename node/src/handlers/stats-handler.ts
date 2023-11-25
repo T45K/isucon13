@@ -54,9 +54,12 @@ export const getUserStatisticsHandler = [
       }
 
       // 全てのreactionをDBから取得
-      const [reactions] = await conn
+      let [reactions] = await conn
         .query<(ReactionsModel & RowDataPacket)[]>('SELECT * FROM reactions')
         .catch(throwErrorWith('failed to get reactions'))
+      if (!reactions) {
+        reactions = []
+      }
       // reactionをlivestream_idでグルーピングする
       const reactionsByLivestreamId: { [key: number]: ReactionsModel[] } = {}
       for (const reaction of reactions) {
@@ -67,11 +70,14 @@ export const getUserStatisticsHandler = [
       }
 
       // 全てのlivecommentをDBから取得
-      const [livecomments] = await conn
+      let [livecomments] = await conn
         .query<(LivecommentsModel & RowDataPacket)[]>(
           'SELECT * FROM livecomments',
         )
         .catch(throwErrorWith('failed to get livecomments'))
+      if (!livecomments) {
+        livecomments = []
+      }
       // livecommentをlivestream_idでグルーピング
       const livecommentsByLivestreamId: {
         [key: number]: LivecommentsModel[]
