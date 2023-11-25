@@ -33,7 +33,7 @@ export const getTagHandler = async (
     return c.text(`Internal Server Error\n${error}`, 500)
   } finally {
     // await conn.rollback()
-    await conn.release()
+    conn.release()
   }
 }
 
@@ -80,7 +80,7 @@ export const getStreamerThemeHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      await conn.release()
+      conn.release()
     }
   },
 ]

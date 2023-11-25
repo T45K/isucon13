@@ -109,14 +109,24 @@ export const reserveLivestreamHandler = [
         .catch(throwErrorWith('failed to insert livestream'))
 
       // タグ追加
-      for (const tagId of body.tags) {
+      // for (const tagId of body.tags) {
+      //   await conn
+      //     .execute(
+      //       'INSERT INTO livestream_tags (livestream_id, tag_id) VALUES (?, ?)',
+      //       [livestreamId, tagId],
+      //     )
+      //     .catch(throwErrorWith('failed to insert livestream tag'))
+      // }
+      // N+1 にならないように書き換え
+      const tagIds = body.tags
+      const values = tagIds.map((tagId) => [livestreamId, tagId])
         await conn
-          .execute(
-            'INSERT INTO livestream_tags (livestream_id, tag_id) VALUES (?, ?)',
-            [livestreamId, tagId],
-          )
-          .catch(throwErrorWith('failed to insert livestream tag'))
-      }
+            .query(
+                'INSERT INTO livestream_tags (livestream_id, tag_id) VALUES ?',
+                [values],
+            )
+            .catch(throwErrorWith('failed to insert livestream tag'))
+
 
       const response = await fillLivestreamResponse(
         conn,
@@ -141,7 +151,7 @@ export const reserveLivestreamHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      await conn.release()
+      conn.release()
     }
   },
 ]
@@ -233,7 +243,7 @@ export const searchLivestreamsHandler = async (
     return c.text(`Internal Server Error\n${error}`, 500)
   } finally {
     // await conn.rollback()
-    await conn.release()
+    conn.release()
   }
 }
 
@@ -273,7 +283,7 @@ export const getMyLivestreamsHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      await conn.release()
+      conn.release()
     }
   },
 ]
@@ -325,7 +335,7 @@ export const getUserLivestreamsHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      await conn.release()
+      conn.release()
     }
   },
 ]
@@ -362,7 +372,7 @@ export const enterLivestreamHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      await conn.release()
+      conn.release()
     }
   },
 ]
@@ -399,7 +409,7 @@ export const exitLivestreamHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      await conn.release()
+      conn.release()
     }
   },
 ]
@@ -442,7 +452,7 @@ export const getLivestreamHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      await conn.release()
+      conn.release()
     }
   },
 ]
@@ -498,7 +508,7 @@ export const getLivecommentReportsHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      await conn.release()
+      conn.release()
     }
   },
 ]

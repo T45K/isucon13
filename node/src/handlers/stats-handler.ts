@@ -183,7 +183,7 @@ export const getUserStatisticsHandler = [
       return c.text(`Internal Server Error\n${error} ${error.stack}`, 500)
     } finally {
       // await conn.rollback()
-      await conn.release()
+      conn.release()
     }
   },
 ]
@@ -306,7 +306,7 @@ export const getLivestreamStatisticsHandler = [
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
-      await conn.release()
+      conn.release()
     }
   },
 ]

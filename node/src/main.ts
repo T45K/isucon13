@@ -87,7 +87,7 @@ const pool = createPool({
   database: process.env['ISUCON13_MYSQL_DIALCONFIG_DATABASE'] ?? 'isupipe',
   host: process.env['ISUCON13_MYSQL_DIALCONFIG_ADDRESS'] ?? '127.0.0.1',
   port: Number(process.env['ISUCON13_MYSQL_DIALCONFIG_PORT'] ?? '3306'),
-  connectionLimit: 150, // max_connections was 151 by default
+  connectionLimit: 500, // max_connections was 151 by default
 })
 
 if (!process.env['ISUCON13_POWERDNS_SUBDOMAIN_ADDRESS']) {
