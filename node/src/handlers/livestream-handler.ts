@@ -1,26 +1,24 @@
-import { Context } from 'hono'
-import { RowDataPacket, ResultSetHeader } from 'mysql2/promise'
-import { HonoEnvironment } from '../types/application'
-import { verifyUserSessionMiddleware } from '../middlewares/verify-user-session-middleare'
-import { defaultUserIDKey } from '../contants'
+import {Context} from 'hono'
+import {ResultSetHeader, RowDataPacket} from 'mysql2/promise'
+import {HonoEnvironment} from '../types/application'
+import {verifyUserSessionMiddleware} from '../middlewares/verify-user-session-middleare'
+import {defaultUserIDKey} from '../contants'
+import {fillLivestreamResponse, LivestreamResponse,} from '../utils/fill-livestream-response'
+import {fillLivecommentReportResponse, LivecommentReportResponse,} from '../utils/fill-livecomment-report-response'
 import {
-  LivestreamResponse,
-  fillLivestreamResponse,
-} from '../utils/fill-livestream-response'
-import {
-  LivecommentReportResponse,
-  fillLivecommentReportResponse,
-} from '../utils/fill-livecomment-report-response'
-import {
-  LivecommentReportsModel,
-  LivestreamTagsModel,
-  LivestreamsModel,
-  ReservationSlotsModel,
-  TagsModel,
-  UserModel,
+    IconModel,
+    LivecommentReportsModel,
+    LivestreamsModel,
+    LivestreamTagsModel,
+    ReservationSlotsModel,
+    TagsModel,
+    ThemeModel,
+    UserModel,
 } from '../types/models'
-import { throwErrorWith } from '../utils/throw-error-with'
-import { atoi } from '../utils/integer'
+import {throwErrorWith} from '../utils/throw-error-with'
+import {atoi} from '../utils/integer'
+import {createHash} from 'node:crypto'
+import {UserResponse} from '../utils/fill-user-response' // POST /api/livestream/reservation
 
 // POST /api/livestream/reservation
 export const reserveLivestreamHandler = [
@@ -153,52 +151,39 @@ export const searchLivestreamsHandler = async (
   const keyTagName = c.req.query('tag')
 
   const conn = await c.get('pool').getConnection()
-  await conn.beginTransaction()
 
   try {
-    const livestreams: (LivestreamsModel & RowDataPacket)[] = []
+    let livestreams: (LivestreamsModel & RowDataPacket)[]
 
     if (keyTagName) {
       // タグによる取得
-      const [tagIds] = await conn
-        .query<(Pick<TagsModel, 'id'> & RowDataPacket)[]>(
-          'SELECT id FROM tags WHERE name = ?',
+      const [tags] = await conn
+        .query<(TagsModel & RowDataPacket)[]>(
+          'SELECT * FROM tags WHERE name = ?',
           [keyTagName],
         )
         .catch(throwErrorWith('failed to get tag'))
 
       const [livestreamTags] = await conn
         .query<(LivestreamTagsModel & RowDataPacket)[]>(
-          'SELECT * FROM livestream_tags WHERE tag_id IN (?) ORDER BY livestream_id DESC',
-          [tagIds.map((tag) => tag.id)],
+          'SELECT * FROM livestream_tags WHERE tag_id IN (?)',
+          [tags.map((tag) => tag.id)],
         )
         .catch(throwErrorWith('failed to get keyTaggedLivestreams'))
 
-      // for (const livestreamTag of livestreamTags) {
-      //   const [[livestream]] = await conn
-      //     .query<(LivestreamsModel & RowDataPacket)[]>(
-      //       'SELECT * FROM livestreams WHERE id = ?',
-      //       [livestreamTag.livestream_id],
-      //     )
-      //     .catch(throwErrorWith('failed to get livestreams'))
-      //
-      //   livestreams.push(livestream)
-      // }
-
-      // 上のコメントアウトした処理を、すべて一回で取ってくるように変更
-
       const [results] = await conn
-          .query<(LivestreamsModel & RowDataPacket)[]>(
+        .query<(LivestreamsModel & RowDataPacket)[]>(
           'SELECT * FROM livestreams WHERE id IN (?) ORDER BY id DESC',
           [livestreamTags.map((livestreamTag) => livestreamTag.livestream_id)],
-          )
-          .catch(throwErrorWith('failed to get livestreams'))
+        )
+        .catch(throwErrorWith('failed to get livestreams'))
 
-      livestreams.push(...results)
-
+      livestreams = results
     } else {
       // 検索条件なし
-      let query = `SELECT * FROM livestreams ORDER BY id DESC`
+      let query = `SELECT *
+                         FROM livestreams
+                         ORDER BY id DESC`
       const limit = c.req.query('limit')
       if (limit) {
         const limitNumber = atoi(limit)
@@ -212,27 +197,130 @@ export const searchLivestreamsHandler = async (
         .query<(LivestreamsModel & RowDataPacket)[]>(query)
         .catch(throwErrorWith('failed to get livestreams'))
 
-      livestreams.push(...results)
+      livestreams = results
+    }
+
+    const tagById: {
+      [key: number]: TagsModel
+    } = {}
+    const tagIdsByLivestreamId: {
+      [key: number]: number[]
+    } = {}
+
+    const [livestreamTags] = await conn
+      .query<(LivestreamTagsModel & RowDataPacket)[]>(
+        'SELECT * FROM livestream_tags WHERE livestream_id IN (?)',
+        [livestreams.map((livestream) => livestream.id)],
+      )
+      .catch(throwErrorWith('failed to get keyTaggedLivestreams'))
+
+    for (const livestreamTag of livestreamTags) {
+      if (!tagIdsByLivestreamId[livestreamTag.livestream_id]) {
+        tagIdsByLivestreamId[livestreamTag.livestream_id] = []
+      }
+      tagIdsByLivestreamId[livestreamTag.livestream_id].push(
+        livestreamTag.tag_id,
+      )
+    }
+
+    const [tags] = await conn
+      .query<(TagsModel & RowDataPacket)[]>(
+        'SELECT * FROM tags WHERE id in (?)',
+        [livestreamTags.map((livestreamTag) => livestreamTag.tag_id)],
+      )
+      .catch(throwErrorWith('failed to get tag'))
+
+    // tagをidごとにグルーピング
+    for (const tag of tags) {
+      tagById[tag.id] = tag
+    }
+
+    const userIds = livestreams.map((livestream) => livestream.user_id)
+    const [users] = await conn
+      .query<(UserModel & RowDataPacket)[]>(
+        'SELECT * FROM users WHERE id in (?)',
+        [userIds],
+      )
+      .catch(throwErrorWith('failed to get tag'))
+    // usersをidごとにグルーピング
+    const userById: {
+      [key: number]: UserModel
+    } = {}
+    for (const user of users) {
+      userById[user.id] = user
+    }
+
+    const [themes] = await conn.query<(ThemeModel & RowDataPacket)[]>(
+      'SELECT * FROM themes WHERE user_id in (?)',
+      [userIds],
+    )
+    // themeをuser_idごとにグルーピング
+    const themeByUserId: {
+      [key: number]: ThemeModel
+    } = {}
+    for (const t of themes) {
+      themeByUserId[t.user_id] = t
+    }
+
+    const [icons] = await conn.query<
+      (Pick<IconModel, 'image'> & RowDataPacket)[]
+    >('SELECT image FROM icons WHERE user_id in (?)', [userIds])
+    // iconをuser_idごとにグルーピング
+    const iconByUserId: {
+      [key: number]: Pick<IconModel, 'image'>
+    } = {}
+    for (const icon of icons) {
+      iconByUserId[icon.user_id] = icon
     }
 
     const livestreamResponses: LivestreamResponse[] = []
     for (const livestream of livestreams) {
-      const livestreamResponse = await fillLivestreamResponse(
-        conn,
-        livestream,
-        c.get('runtime').fallbackUserIcon,
-      ).catch(throwErrorWith('failed to fill livestream'))
-      livestreamResponses.push(livestreamResponse)
-    }
+      const user = userById[livestream.user_id]
+      const theme = themeByUserId[user.id]
+      const image =
+        icons[user.id]?.image ?? (await c.get('runtime').fallbackUserIcon())
 
-    await conn.commit().catch(throwErrorWith('failed to commit'))
+      const iconHash =
+        global.iconHash[user.id] ??
+        createHash('sha256').update(new Uint8Array(image)).digest('hex')
+
+      const userResponse = {
+        id: user.id,
+        name: user.name,
+        display_name: user.display_name,
+        description: user.description,
+        theme: {
+          id: theme.id,
+          dark_mode: !!theme.dark_mode,
+        },
+        icon_hash: iconHash,
+      } satisfies UserResponse
+
+      const tagIds = tagIdsByLivestreamId[livestream.id] ?? []
+      const tags = []
+      for (let tagId of tagIds) {
+        tags.push(tagById[tagId])
+      }
+
+      const response = {
+        id: livestream.id,
+        owner: userResponse,
+        title: livestream.title,
+        tags: tags.map((tag) => ({ id: tag.id, name: tag.name })),
+        description: livestream.description,
+        playlist_url: livestream.playlist_url,
+        thumbnail_url: livestream.thumbnail_url,
+        start_at: livestream.start_at,
+        end_at: livestream.end_at,
+      } satisfies LivestreamResponse
+
+      livestreamResponses.push(response)
+    }
 
     return c.json(livestreamResponses)
   } catch (error) {
-    await conn.rollback()
-    return c.text(`Internal Server Error\n${error}`, 500)
+    return c.text(`Internal Server Error\n${error} ${error.stack}`, 500)
   } finally {
-    await conn.rollback()
     conn.release()
   }
 }
