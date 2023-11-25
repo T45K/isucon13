@@ -10,14 +10,14 @@ export const getTagHandler = async (
   c: Context<HonoEnvironment, '/api/tag'>,
 ) => {
   const conn = await c.get('pool').getConnection()
-  await conn.beginTransaction()
+  // await conn.beginTransaction()
 
   try {
     const [tags] = await conn
       .execute<(TagsModel & RowDataPacket)[]>('SELECT * FROM tags')
       .catch(throwErrorWith('failed to get tags'))
 
-    await conn.commit().catch(throwErrorWith('failed to commit'))
+    // await conn.commit().catch(throwErrorWith('failed to commit'))
 
     const tagResponses = []
     for (const tag of tags) {
@@ -29,10 +29,10 @@ export const getTagHandler = async (
 
     return c.json({ tags: tagResponses })
   } catch (error) {
-    await conn.rollback()
+    // await conn.rollback()
     return c.text(`Internal Server Error\n${error}`, 500)
   } finally {
-    await conn.rollback()
+    // await conn.rollback()
     conn.release()
   }
 }
@@ -45,7 +45,7 @@ export const getStreamerThemeHandler = [
     const username = c.req.param('username')
 
     const conn = await c.get('pool').getConnection()
-    await conn.beginTransaction()
+    // await conn.beginTransaction()
 
     try {
       const [[user]] = await conn
@@ -56,7 +56,7 @@ export const getStreamerThemeHandler = [
         .catch(throwErrorWith('failed to get user'))
 
       if (!user) {
-        await conn.rollback()
+        // await conn.rollback()
         return c.text('not found user that has the given username', 404)
       }
 
@@ -67,7 +67,7 @@ export const getStreamerThemeHandler = [
         )
         .catch(throwErrorWith('failed to get user theme'))
 
-      await conn.commit().catch(throwErrorWith('failed to commit'))
+      // await conn.commit().catch(throwErrorWith('failed to commit'))
 
       const themeResponse = {
         id: theme.id,
@@ -76,10 +76,10 @@ export const getStreamerThemeHandler = [
 
       return c.json(themeResponse)
     } catch (error) {
-      await conn.rollback()
+      // await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
+      // await conn.rollback()
       conn.release()
     }
   },
