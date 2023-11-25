@@ -64,56 +64,56 @@ export const reserveLivestreamHandler = [
           return throwErrorWith('failed to get reservation_slots')(error)
         })
 
-      // for (const slot of slots) {
-      //   const [[count]] = await conn
-      //     .query<(Pick<ReservationSlotsModel, 'slot'> & RowDataPacket)[]>(
-      //       'SELECT slot FROM reservation_slots WHERE start_at = ? AND end_at = ?',
-      //       [slot.start_at, slot.end_at],
-      //     )
-      //     .catch(throwErrorWith('failed to get reservation_slots'))
-      //
-      //   console.info(
-      //     `${slot.start_at} ~ ${slot.end_at} 予約枠の残数 = ${count.slot}`,
-      //   )
-      //   if (count.slot < 1) {
-      //     return c.text(
-      //       `予約期間 ${Math.floor(termStartAt / 1000)} ~ ${Math.floor(
-      //         termEndAt / 1000,
-      //       )}に対して、予約区間 ${body.start_at} ~ ${
-      //         body.end_at
-      //       }が予約できません`,
-      //       400,
-      //     )
-      //   }
-      // }
-      const startAtValues = slots.map(slot => slot.start_at);
-      const endAtValues = slots.map(slot => slot.end_at);
-
-      const results = await conn
+      for (const slot of slots) {
+        const [[count]] = await conn
           .query<(Pick<ReservationSlotsModel, 'slot'> & RowDataPacket)[]>(
-              `SELECT start_at, end_at, COUNT(*) as slot_count
-               FROM reservation_slots
-               WHERE start_at IN (?) AND end_at IN (?)
-               GROUP BY start_at, end_at`,
-              [startAtValues, endAtValues],
+            'SELECT slot FROM reservation_slots WHERE start_at = ? AND end_at = ?',
+            [slot.start_at, slot.end_at],
           )
-          .catch(throwErrorWith('failed to get reservation_slots'));
+          .catch(throwErrorWith('failed to get reservation_slots'))
 
-      for (const result of results) {
         console.info(
-            `${result.start_at} ~ ${result.end_at} 予約枠の残数 = ${result.slot_count}`
-        );
-        if (result.slot_count < 1) {
+          `${slot.start_at} ~ ${slot.end_at} 予約枠の残数 = ${count.slot}`,
+        )
+        if (count.slot < 1) {
           return c.text(
-              `予約期間 ${Math.floor(termStartAt / 1000)} ~ ${Math.floor(
-                  termEndAt / 1000
-              )}に対して、予約区間 ${body.start_at} ~ ${
-                  body.end_at
-              }が予約できません`,
-              400
-          );
+            `予約期間 ${Math.floor(termStartAt / 1000)} ~ ${Math.floor(
+              termEndAt / 1000,
+            )}に対して、予約区間 ${body.start_at} ~ ${
+              body.end_at
+            }が予約できません`,
+            400,
+          )
         }
       }
+      // const startAtValues = slots.map(slot => slot.start_at);
+      // const endAtValues = slots.map(slot => slot.end_at);
+      //
+      // const results = await conn
+      //     .query<(Pick<ReservationSlotsModel, 'slot'> & RowDataPacket)[]>(
+      //         `SELECT start_at, end_at, COUNT(*) as slot_count
+      //          FROM reservation_slots
+      //          WHERE start_at IN (?) AND end_at IN (?)
+      //          GROUP BY start_at, end_at`,
+      //         [startAtValues, endAtValues],
+      //     )
+      //     .catch(throwErrorWith('failed to get reservation_slots'));
+      //
+      // for (const result of results) {
+      //   console.info(
+      //       `${result.start_at} ~ ${result.end_at} 予約枠の残数 = ${result.slot_count}`
+      //   );
+      //   if (result.slot_count < 1) {
+      //     return c.text(
+      //         `予約期間 ${Math.floor(termStartAt / 1000)} ~ ${Math.floor(
+      //             termEndAt / 1000
+      //         )}に対して、予約区間 ${body.start_at} ~ ${
+      //             body.end_at
+      //         }が予約できません`,
+      //         400
+      //     );
+      //   }
+      // }
 
       await conn
         .query(
@@ -137,24 +137,23 @@ export const reserveLivestreamHandler = [
         .catch(throwErrorWith('failed to insert livestream'))
 
       // タグ追加
-      for (const tagId of body.tags) {
-        await conn
-          .execute(
-            'INSERT INTO livestream_tags (livestream_id, tag_id) VALUES (?, ?)',
-            [livestreamId, tagId],
-          )
-          .catch(throwErrorWith('failed to insert livestream tag'))
-      }
-
-      // TODO: N+1解消を試す
-      // タグ追加
-      // const tagValues = body.tags.map(tagId => [livestreamId, tagId]);
-      // await conn
-      //     .query(
-      //         'INSERT INTO livestream_tags (livestream_id, tag_id) VALUES ?',
-      //         [tagValues],
+      // for (const tagId of body.tags) {
+      //   await conn
+      //     .execute(
+      //       'INSERT INTO livestream_tags (livestream_id, tag_id) VALUES (?, ?)',
+      //       [livestreamId, tagId],
       //     )
-      //     .catch(throwErrorWith('failed to insert livestream tags'));
+      //     .catch(throwErrorWith('failed to insert livestream tag'))
+      // }
+
+      // タグ追加 N+1解消
+      const tagValues = body.tags.map(tagId => [livestreamId, tagId]);
+      await conn
+          .query(
+              'INSERT INTO livestream_tags (livestream_id, tag_id) VALUES ?',
+              [tagValues],
+          )
+          .catch(throwErrorWith('failed to insert livestream tags'));
 
       const response = await fillLivestreamResponse(
         conn,
