@@ -12,13 +12,8 @@ import {createHash} from 'node:crypto' // GET /api/user/:username/icon
 export const getIconHandler = [
   async (c: Context<HonoEnvironment, '/api/user/:username/icon'>) => {
     const username = c.req.param('username')
-    const ifNoneMatchHeader = c.req.header('If-None-Match')
-    if (ifNoneMatchHeader && global.iconHash[ifNoneMatchHeader] === 'exists') {
-      return c.body(null, 304, {})
-    }
 
     const conn = await c.get('pool').getConnection()
-    await conn.beginTransaction()
 
     try {
       const [[user]] = await conn
@@ -29,8 +24,12 @@ export const getIconHandler = [
         .catch(throwErrorWith('failed to get user'))
 
       if (!user) {
-        await conn.rollback()
         return c.text('not found user that has the given username', 404)
+      }
+
+      const ifNoneMatchHeader = c.req.header('If-None-Match') ?? ''
+      if (ifNoneMatchHeader === global.iconHash[user.id]) {
+        return c.body(null, 304, {})
       }
 
       const [[icon]] = await conn
@@ -40,22 +39,17 @@ export const getIconHandler = [
         )
         .catch(throwErrorWith('failed to get icon'))
       if (!icon) {
-        await conn.rollback()
         return c.body(await c.get('runtime').fallbackUserIcon(), 200, {
           'Content-Type': 'image/jpeg',
         })
       }
 
-      await conn.commit().catch(throwErrorWith('failed to commit'))
-
       return c.body(icon.image, 200, {
         'Content-Type': 'image/jpeg',
       })
     } catch (error) {
-      await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
       conn.release()
     }
   },
