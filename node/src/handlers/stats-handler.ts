@@ -14,7 +14,7 @@ export const getUserStatisticsHandler = [
     // ユーザごとに、紐づく配信について、累計リアクション数、累計ライブコメント数、累計売上金額を算出
     // また、現在の合計視聴者数もだす
 
-    const conn = await (c.get('pool') as Pool).getConnection()
+    const conn = await c.get('pool').getConnection()
     await conn.beginTransaction()
 
     try {

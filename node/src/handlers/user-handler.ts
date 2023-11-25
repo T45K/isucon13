@@ -1,15 +1,12 @@
-import { Context } from 'hono'
-import { ResultSetHeader, RowDataPacket } from 'mysql2/promise'
-import { HonoEnvironment } from '../types/application'
-import {
-  defaultUserIDKey,
-  defaultUserNameKey,
-  defaultSessionExpiresKey,
-} from '../contants'
-import { verifyUserSessionMiddleware } from '../middlewares/verify-user-session-middleare'
-import { fillUserResponse } from '../utils/fill-user-response'
-import { throwErrorWith } from '../utils/throw-error-with'
-import { IconModel, UserModel } from '../types/models'
+import {Context} from 'hono'
+import {ResultSetHeader, RowDataPacket} from 'mysql2/promise'
+import {HonoEnvironment} from '../types/application'
+import {defaultSessionExpiresKey, defaultUserIDKey, defaultUserNameKey,} from '../contants'
+import {verifyUserSessionMiddleware} from '../middlewares/verify-user-session-middleare'
+import {fillUserResponse} from '../utils/fill-user-response'
+import {throwErrorWith} from '../utils/throw-error-with'
+import {IconModel, UserModel} from '../types/models'
+import {createHash} from 'node:crypto' // GET /api/user/:username/icon
 
 // GET /api/user/:username/icon
 export const getIconHandler = [
@@ -17,41 +14,40 @@ export const getIconHandler = [
     const username = c.req.param('username')
 
     const conn = await c.get('pool').getConnection()
-    await conn.beginTransaction()
 
     try {
       const [[user]] = await conn
-        .query<(UserModel & RowDataPacket)[]>(
-          'SELECT * FROM users WHERE name = ?',
-          [username],
-        )
-        .catch(throwErrorWith('failed to get user'))
+          .query<(UserModel & RowDataPacket)[]>(
+              'SELECT * FROM users WHERE name = ?',
+              [username],
+          )
+          .catch(throwErrorWith('failed to get user'))
 
       if (!user) {
-        await conn.rollback()
         return c.text('not found user that has the given username', 404)
       }
 
+      const ifNoneMatchHeader = c.req.header('If-None-Match') ?? ''
+      if (ifNoneMatchHeader === global.iconHash[user.id]) {
+        return c.body(null, 304, {})
+      }
+
       const [[icon]] = await conn
-        .query<(Pick<IconModel, 'image'> & RowDataPacket)[]>(
-          'SELECT image FROM icons WHERE user_id = ?',
-          [user.id],
-        )
-        .catch(throwErrorWith('failed to get icon'))
+          .query<(Pick<IconModel, 'image'> & RowDataPacket)[]>(
+              'SELECT image FROM icons WHERE user_id = ?',
+              [user.id],
+          )
+          .catch(throwErrorWith('failed to get icon'))
       if (!icon) {
-        await conn.rollback()
         return c.body(await c.get('runtime').fallbackUserIcon(), 200, {
           'Content-Type': 'image/jpeg',
         })
       }
 
-      await conn.commit().catch(throwErrorWith('failed to commit'))
-
       return c.body(icon.image, 200, {
         'Content-Type': 'image/jpeg',
       })
     } catch (error) {
-      await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
       // await conn.rollback()
@@ -74,15 +70,21 @@ export const postIconHandler = [
 
     try {
       await conn
-        .execute('DELETE FROM icons WHERE user_id = ?', [userId])
-        .catch(throwErrorWith('failed to delete old user icon'))
+          .execute('DELETE FROM icons WHERE user_id = ?', [userId])
+          .catch(throwErrorWith('failed to delete old user icon'))
 
+      const imageBuffer = Buffer.from(body.image, 'base64')
       const [{ insertId: iconId }] = await conn
-        .query<ResultSetHeader>(
-          'INSERT INTO icons (user_id, image) VALUES (?, ?)',
-          [userId, Buffer.from(body.image, 'base64')],
-        )
-        .catch(throwErrorWith('failed to insert icon'))
+          .query<ResultSetHeader>(
+              'INSERT INTO icons (user_id, image) VALUES (?, ?)',
+              [userId, imageBuffer],
+          )
+          .catch(throwErrorWith('failed to insert icon'))
+
+      const iconHash = createHash('sha256')
+          .update(new Uint8Array(imageBuffer))
+          .digest('hex')
+      global.iconHash[userId] = iconHash
 
       await conn.commit().catch(throwErrorWith('failed to commit'))
 
@@ -91,7 +93,7 @@ export const postIconHandler = [
       await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      // await conn.rollback()
+      await conn.rollback()
       await conn.release()
     }
   },
@@ -108,11 +110,11 @@ export const getMeHandler = [
 
     try {
       const [[user]] = await conn
-        .query<(UserModel & RowDataPacket)[]>(
-          'SELECT * FROM users WHERE id = ?',
-          [userId],
-        )
-        .catch(throwErrorWith('failed to get user'))
+          .query<(UserModel & RowDataPacket)[]>(
+              'SELECT * FROM users WHERE id = ?',
+              [userId],
+          )
+          .catch(throwErrorWith('failed to get user'))
 
       if (!user) {
         await conn.rollback()
@@ -120,9 +122,9 @@ export const getMeHandler = [
       }
 
       const response = await fillUserResponse(
-        conn,
-        user,
-        c.get('runtime').fallbackUserIcon,
+          conn,
+          user,
+          c.get('runtime').fallbackUserIcon,
       ).catch(throwErrorWith('failed to fill user'))
 
       await conn.commit().catch(throwErrorWith('failed to commit'))
@@ -141,7 +143,7 @@ export const getMeHandler = [
 // ユーザ登録API
 // POST /api/register
 export const registerHandler = async (
-  c: Context<HonoEnvironment, '/api/register'>,
+    c: Context<HonoEnvironment, '/api/register'>,
 ) => {
   const body = await c.req.json<{
     name: string
@@ -156,50 +158,50 @@ export const registerHandler = async (
   }
 
   const hashedPassword = await c
-    .get('runtime')
-    .hashPassword(body.password)
-    .catch(throwErrorWith('failed to generate hashed password'))
+      .get('runtime')
+      .hashPassword(body.password)
+      .catch(throwErrorWith('failed to generate hashed password'))
 
   const conn = await c.get('pool').getConnection()
   await conn.beginTransaction()
 
   try {
     const [{ insertId: userId }] = await conn
-      .execute<ResultSetHeader>(
-        'INSERT INTO users (name, display_name, description, password) VALUES(?, ?, ?, ?)',
-        [body.name, body.display_name, body.description, hashedPassword],
-      )
-      .catch(throwErrorWith('failed to insert user'))
+        .execute<ResultSetHeader>(
+            'INSERT INTO users (name, display_name, description, password) VALUES(?, ?, ?, ?)',
+            [body.name, body.display_name, body.description, hashedPassword],
+        )
+        .catch(throwErrorWith('failed to insert user'))
 
     await conn
-      .execute('INSERT INTO themes (user_id, dark_mode) VALUES(?, ?)', [
-        userId,
-        body.theme.dark_mode,
-      ])
-      .catch(throwErrorWith('failed to insert user theme'))
+        .execute('INSERT INTO themes (user_id, dark_mode) VALUES(?, ?)', [
+          userId,
+          body.theme.dark_mode,
+        ])
+        .catch(throwErrorWith('failed to insert user theme'))
 
     await c
-      .get('runtime')
-      .exec([
-        'pdnsutil',
-        'add-record',
-        'u.isucon.dev',
-        body.name,
-        'A',
-        '0',
-        c.get('runtime').powerDNSSubdomainAddress,
-      ])
-      .catch(throwErrorWith('failed to add record to powerdns'))
+        .get('runtime')
+        .exec([
+          'pdnsutil',
+          'add-record',
+          'u.isucon.dev',
+          body.name,
+          'A',
+          '0',
+          c.get('runtime').powerDNSSubdomainAddress,
+        ])
+        .catch(throwErrorWith('failed to add record to powerdns'))
 
     const response = await fillUserResponse(
-      conn,
-      {
-        id: userId,
-        name: body.name,
-        display_name: body.display_name,
-        description: body.description,
-      },
-      c.get('runtime').fallbackUserIcon,
+        conn,
+        {
+          id: userId,
+          name: body.name,
+          display_name: body.display_name,
+          description: body.description,
+        },
+        c.get('runtime').fallbackUserIcon,
     ).catch(throwErrorWith('failed to fill user'))
 
     await conn.commit().catch(throwErrorWith('failed to commit'))
@@ -217,7 +219,7 @@ export const registerHandler = async (
 // ユーザログインAPI
 // POST /api/login
 export const loginHandler = async (
-  c: Context<HonoEnvironment, '/api/login'>,
+    c: Context<HonoEnvironment, '/api/login'>,
 ) => {
   const body = await c.req.json<{
     username: string
@@ -230,11 +232,11 @@ export const loginHandler = async (
   try {
     // usernameはUNIQUEなので、whereで一意に特定できる
     const [[user]] = await conn
-      .query<(UserModel & RowDataPacket)[]>(
-        'SELECT * FROM users WHERE name = ?',
-        [body.username],
-      )
-      .catch(throwErrorWith('failed to get user'))
+        .query<(UserModel & RowDataPacket)[]>(
+            'SELECT * FROM users WHERE name = ?',
+            [body.username],
+        )
+        .catch(throwErrorWith('failed to get user'))
 
     if (!user) {
       await conn.rollback()
@@ -244,9 +246,9 @@ export const loginHandler = async (
     await conn.commit().catch(throwErrorWith('failed to commit'))
 
     const isPasswordMatch = await c
-      .get('runtime')
-      .comparePassword(body.password, user.password)
-      .catch(throwErrorWith('failed to compare hash and password'))
+        .get('runtime')
+        .comparePassword(body.password, user.password)
+        .catch(throwErrorWith('failed to compare hash and password'))
     if (!isPasswordMatch) {
       return c.text('invalid username or password', 401)
     }
@@ -281,11 +283,11 @@ export const getUserHandler = [
 
     try {
       const [[user]] = await conn
-        .query<(UserModel & RowDataPacket)[]>(
-          'SELECT * FROM users WHERE name = ?',
-          [username],
-        )
-        .catch(throwErrorWith('failed to get user'))
+          .query<(UserModel & RowDataPacket)[]>(
+              'SELECT * FROM users WHERE name = ?',
+              [username],
+          )
+          .catch(throwErrorWith('failed to get user'))
 
       if (!user) {
         await conn.rollback()
@@ -293,9 +295,9 @@ export const getUserHandler = [
       }
 
       const response = await fillUserResponse(
-        conn,
-        user,
-        c.get('runtime').fallbackUserIcon,
+          conn,
+          user,
+          c.get('runtime').fallbackUserIcon,
       ).catch(throwErrorWith('failed to fill user'))
 
       await conn.commit().catch(throwErrorWith('failed to commit'))
