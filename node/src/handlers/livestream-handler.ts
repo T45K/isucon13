@@ -6,14 +6,14 @@ import {defaultUserIDKey} from '../contants'
 import {fillLivestreamResponse, LivestreamResponse,} from '../utils/fill-livestream-response'
 import {fillLivecommentReportResponse, LivecommentReportResponse,} from '../utils/fill-livecomment-report-response'
 import {
-  IconModel,
-  LivecommentReportsModel,
-  LivestreamsModel,
-  LivestreamTagsModel,
-  ReservationSlotsModel,
-  TagsModel,
-  ThemeModel,
-  UserModel,
+    IconModel,
+    LivecommentReportsModel,
+    LivestreamsModel,
+    LivestreamTagsModel,
+    ReservationSlotsModel,
+    TagsModel,
+    ThemeModel,
+    UserModel,
 } from '../types/models'
 import {throwErrorWith} from '../utils/throw-error-with'
 import {atoi} from '../utils/integer'
@@ -267,7 +267,7 @@ export const searchLivestreamsHandler = async (
         description: user.description,
         theme: {
           id: theme.id,
-          dark_mode: theme.dark_mode,
+          dark_mode: !!theme.dark_mode,
         },
         icon_hash: iconHash,
       } satisfies UserResponse
