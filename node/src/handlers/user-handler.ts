@@ -1,20 +1,20 @@
-import { Context } from 'hono'
-import { ResultSetHeader, RowDataPacket } from 'mysql2/promise'
-import { HonoEnvironment } from '../types/application'
-import {
-  defaultUserIDKey,
-  defaultUserNameKey,
-  defaultSessionExpiresKey,
-} from '../contants'
-import { verifyUserSessionMiddleware } from '../middlewares/verify-user-session-middleare'
-import { fillUserResponse } from '../utils/fill-user-response'
-import { throwErrorWith } from '../utils/throw-error-with'
-import { IconModel, UserModel } from '../types/models'
+import {Context} from 'hono'
+import {ResultSetHeader, RowDataPacket} from 'mysql2/promise'
+import {HonoEnvironment} from '../types/application'
+import {defaultSessionExpiresKey, defaultUserIDKey, defaultUserNameKey,} from '../contants'
+import {verifyUserSessionMiddleware} from '../middlewares/verify-user-session-middleare'
+import {fillUserResponse} from '../utils/fill-user-response'
+import {throwErrorWith} from '../utils/throw-error-with'
+import {IconModel, UserModel} from '../types/models'
 
 // GET /api/user/:username/icon
 export const getIconHandler = [
   async (c: Context<HonoEnvironment, '/api/user/:username/icon'>) => {
     const username = c.req.param('username')
+    const ifNoneMatchHeader = c.req.header()['If-None-Match']
+    if (ifNoneMatchHeader && global.iconHash[ifNoneMatchHeader] == 'exists') {
+      return c.body(null, 304, {})
+    }
 
     const conn = await c.get('pool').getConnection()
     await conn.beginTransaction()
