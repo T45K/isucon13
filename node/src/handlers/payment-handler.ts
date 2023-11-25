@@ -8,7 +8,7 @@ export const GetPaymentResult = async (
   c: Context<HonoEnvironment, '/api/payment'>,
 ) => {
   const conn = await c.get('pool').getConnection()
-  await conn.beginTransaction()
+  // await conn.beginTransaction()
 
   try {
     const [[{ 'IFNULL(SUM(tip), 0)': totalTip }]] = await conn
@@ -21,10 +21,10 @@ export const GetPaymentResult = async (
 
     return c.json({ totalTip: totalTip })
   } catch (error) {
-    await conn.rollback()
+    // await conn.rollback()
     return c.text(`Internal Server Error\n${error}`, 500)
   } finally {
-    await conn.rollback()
+    // await conn.rollback()
     conn.release()
   }
 }
