@@ -45,7 +45,7 @@ export const fillUserResponse = async (
     description: user.description,
     theme: {
       id: theme.id,
-      dark_mode: !!theme.dark_mode,
+      dark_mode: theme.dark_mode,
     },
     icon_hash: iconHash,
   } satisfies UserResponse
