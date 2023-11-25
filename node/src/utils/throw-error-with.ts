@@ -10,5 +10,6 @@
 export const throwErrorWith =
   (message: string) =>
   (error: unknown): never => {
+    console.trace(error)
     throw `${message}\n${error}`
   }
