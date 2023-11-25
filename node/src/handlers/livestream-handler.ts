@@ -48,7 +48,6 @@ export const reserveLivestreamHandler = [
       const reserveEndAt = body.end_at * 1000
 
       if (reserveStartAt >= termEndAt || reserveEndAt <= termStartAt) {
-        await conn.rollback()
         return c.text('bad reservation time range', 400)
       }
 
@@ -140,7 +139,6 @@ export const reserveLivestreamHandler = [
       await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
       conn.release()
     }
   },
