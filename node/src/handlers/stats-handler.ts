@@ -100,9 +100,6 @@ export const getUserStatisticsHandler = [
           if (livestreamReactions) {
             reaction += livestreamReactions.length
           }
-          if (user.name === username) {
-            totalReactions = reaction
-          }
 
           const livestreamLivecomments =
             livecommentsByLivestreamId[livestream.id]
@@ -113,8 +110,11 @@ export const getUserStatisticsHandler = [
           }
           if (user.name === username) {
             totalLivecomments = livestreamLivecomments?.length ?? 0
-            totalTip = tips
           }
+        }
+        if (user.name === username) {
+          totalReactions = reaction
+          totalTip = tips
         }
 
         ranking.push({
