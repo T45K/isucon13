@@ -177,7 +177,7 @@ export const searchLivestreamsHandler = async (
 
       const [livestreamTags] = await conn
         .query<(LivestreamTagsModel & RowDataPacket)[]>(
-          'SELECT * FROM livestream_tags WHERE tag_id IN (?) ORDER BY livestream_id DESC',
+          'SELECT * FROM livestream_tags WHERE tag_id IN (?)',
           [tags.map((tag) => tag.id)],
         )
         .catch(throwErrorWith('failed to get keyTaggedLivestreams'))
@@ -216,6 +216,32 @@ export const searchLivestreamsHandler = async (
         .catch(throwErrorWith('failed to get livestreams'))
 
       livestreams = results
+
+      const [livestreamTags] = await conn
+        .query<(LivestreamTagsModel & RowDataPacket)[]>(
+          'SELECT * FROM livestream_tags WHERE livestream_id IN (?)',
+          [livestreams.map((livestream) => livestream.id)],
+        )
+        .catch(throwErrorWith('failed to get keyTaggedLivestreams'))
+
+      for (const livestreamTag of livestreamTags) {
+        if (!tagIdsByLivestreamId[livestreamTag.id]) {
+          tagIdsByLivestreamId[livestreamTag.id] = []
+        }
+        tagIdsByLivestreamId[livestreamTag.id].push(livestreamTag.tag_id)
+      }
+
+      const [tags] = await conn
+        .query<(TagsModel & RowDataPacket)[]>(
+          'SELECT * FROM tags WHERE id in (?)',
+          [livestreamTags.map((livestreamTag) => livestreamTag.tag_id)],
+        )
+        .catch(throwErrorWith('failed to get tag'))
+
+      // tagをidごとにグルーピング
+      for (const tag of tags) {
+        tagById[tag.id] = tag
+      }
     }
 
     const userIds = livestreams.map((livestream) => livestream.user_id)
