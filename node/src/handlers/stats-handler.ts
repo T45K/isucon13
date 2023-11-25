@@ -85,12 +85,8 @@ export const getUserStatisticsHandler = [
       let totalLivecomments = 0
       let totalTip = 0
       for (const user of users) {
-        const livestreams = livestreamsByUserId[user.id]
-        if (
-          livestreams === undefined ||
-          livestreams.length === null ||
-          livestreams.length === 0
-        ) {
+        const livestreams = livestreamsByUserId[Number(user.id)] ?? []
+        if (livestreams.length === 0) {
           ranking.push({
             username: user.name,
             score: 0,
