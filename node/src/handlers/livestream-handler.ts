@@ -119,11 +119,10 @@ export const reserveLivestreamHandler = [
       // }
       // N+1 にならないように書き換え
       const tagIds = body.tags
-      const values = tagIds.map((tagId) => [livestreamId, tagId])
         await conn
             .query(
                 'INSERT INTO livestream_tags (livestream_id, tag_id) VALUES ?',
-                [values],
+                [tagIds.map((tagId) => [livestreamId, tagId])],
             )
             .catch(throwErrorWith('failed to insert livestream tags'))
 
