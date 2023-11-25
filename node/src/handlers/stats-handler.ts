@@ -86,7 +86,7 @@ export const getUserStatisticsHandler = [
       let totalTip = 0
       for (const user of users) {
         const livestreams = livestreamsByUserId[user.id]
-        if (!livestreams.length) {
+        if (!livestreams) {
           ranking.push({
             username: user.name,
             score: 0,
