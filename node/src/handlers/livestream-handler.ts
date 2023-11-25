@@ -125,7 +125,7 @@ export const reserveLivestreamHandler = [
                 'INSERT INTO livestream_tags (livestream_id, tag_id) VALUES ?',
                 [values],
             )
-            .catch(throwErrorWith('failed to insert livestream tag'))
+            .catch(throwErrorWith('failed to insert livestream tags'))
 
 
       const response = await fillLivestreamResponse(
