@@ -140,7 +140,7 @@ export const reserveLivestreamHandler = [
       await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
+      // await conn.rollback()
       conn.release()
     }
   },
@@ -232,7 +232,7 @@ export const searchLivestreamsHandler = async (
     await conn.rollback()
     return c.text(`Internal Server Error\n${error}`, 500)
   } finally {
-    await conn.rollback()
+    // await conn.rollback()
     conn.release()
   }
 }
@@ -272,7 +272,7 @@ export const getMyLivestreamsHandler = [
       await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
+      // await conn.rollback()
       conn.release()
     }
   },
@@ -324,7 +324,7 @@ export const getUserLivestreamsHandler = [
       await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
+      // await conn.rollback()
       conn.release()
     }
   },
@@ -361,7 +361,7 @@ export const enterLivestreamHandler = [
       await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
+      // await conn.rollback()
       conn.release()
     }
   },
@@ -398,7 +398,7 @@ export const exitLivestreamHandler = [
       await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
+      // await conn.rollback()
       conn.release()
     }
   },
@@ -441,7 +441,7 @@ export const getLivestreamHandler = [
       await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
+      // await conn.rollback()
       conn.release()
     }
   },
@@ -497,7 +497,7 @@ export const getLivecommentReportsHandler = [
       await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
+      // await conn.rollback()
       conn.release()
     }
   },

@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { serve } from '@hono/node-server'
-import { compare, hash } from 'bcrypt'
+import { hash, compare } from 'bcrypt'
 import { createPool } from 'mysql2/promise'
 import { CookieStore, sessionMiddleware } from 'hono-sessions'
 import { Hono } from 'hono'
@@ -14,38 +14,38 @@ import {
 } from './types/application'
 import {
   getLivecommentsHandler,
-  getNgwords,
-  moderateHandler,
   postLivecommentHandler,
+  getNgwords,
   reportLivecommentHandler,
+  moderateHandler,
 } from './handlers/livecomment-handler'
 import {
-  enterLivestreamHandler,
-  exitLivestreamHandler,
-  getLivecommentReportsHandler,
-  getLivestreamHandler,
-  getMyLivestreamsHandler,
-  getUserLivestreamsHandler,
   reserveLivestreamHandler,
   searchLivestreamsHandler,
+  getMyLivestreamsHandler,
+  getUserLivestreamsHandler,
+  getLivestreamHandler,
+  getLivecommentReportsHandler,
+  enterLivestreamHandler,
+  exitLivestreamHandler,
 } from './handlers/livestream-handler'
 import { GetPaymentResult } from './handlers/payment-handler'
 import {
-  getReactionsHandler,
   postReactionHandler,
+  getReactionsHandler,
 } from './handlers/reaction-handler'
 import {
-  getLivestreamStatisticsHandler,
   getUserStatisticsHandler,
+  getLivestreamStatisticsHandler,
 } from './handlers/stats-handler'
-import { getStreamerThemeHandler, getTagHandler } from './handlers/top-handler'
+import { getTagHandler, getStreamerThemeHandler } from './handlers/top-handler'
 import {
-  getIconHandler,
+  registerHandler,
+  loginHandler,
   getMeHandler,
   getUserHandler,
-  loginHandler,
+  getIconHandler,
   postIconHandler,
-  registerHandler,
 } from './handlers/user-handler'
 
 const runtime = {
@@ -86,6 +86,7 @@ const pool = createPool({
   password: process.env['ISUCON13_MYSQL_DIALCONFIG_PASSWORD'] ?? 'isucon',
   database: process.env['ISUCON13_MYSQL_DIALCONFIG_DATABASE'] ?? 'isupipe',
   host: process.env['ISUCON13_MYSQL_DIALCONFIG_ADDRESS'] ?? '127.0.0.1',
+  // host: '192.168.0.12', // mysql 専用のサーバーの、ローカル ip アドレス
   port: Number(process.env['ISUCON13_MYSQL_DIALCONFIG_PORT'] ?? '3306'),
   connectionLimit: 150, // max_connections was 151 by default
 })
@@ -134,7 +135,6 @@ app.use('*', async (c, next) => {
 // 初期化
 app.post('/api/initialize', async (c) => {
   try {
-    global.iconHash = {}
     await runtime.exec(['../sql/init.sh'])
     return c.json({ language: 'node' })
   } catch (error) {

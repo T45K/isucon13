@@ -1,12 +1,15 @@
-import {Context} from 'hono'
-import {ResultSetHeader, RowDataPacket} from 'mysql2/promise'
-import {HonoEnvironment} from '../types/application'
-import {defaultSessionExpiresKey, defaultUserIDKey, defaultUserNameKey,} from '../contants'
-import {verifyUserSessionMiddleware} from '../middlewares/verify-user-session-middleare'
-import {fillUserResponse} from '../utils/fill-user-response'
-import {throwErrorWith} from '../utils/throw-error-with'
-import {IconModel, UserModel} from '../types/models'
-import {createHash} from 'node:crypto' // GET /api/user/:username/icon
+import { Context } from 'hono'
+import { ResultSetHeader, RowDataPacket } from 'mysql2/promise'
+import { HonoEnvironment } from '../types/application'
+import {
+  defaultUserIDKey,
+  defaultUserNameKey,
+  defaultSessionExpiresKey,
+} from '../contants'
+import { verifyUserSessionMiddleware } from '../middlewares/verify-user-session-middleare'
+import { fillUserResponse } from '../utils/fill-user-response'
+import { throwErrorWith } from '../utils/throw-error-with'
+import { IconModel, UserModel } from '../types/models'
 
 // GET /api/user/:username/icon
 export const getIconHandler = [
@@ -14,6 +17,7 @@ export const getIconHandler = [
     const username = c.req.param('username')
 
     const conn = await c.get('pool').getConnection()
+    await conn.beginTransaction()
 
     try {
       const [[user]] = await conn
@@ -24,12 +28,8 @@ export const getIconHandler = [
         .catch(throwErrorWith('failed to get user'))
 
       if (!user) {
+        await conn.rollback()
         return c.text('not found user that has the given username', 404)
-      }
-
-      const ifNoneMatchHeader = c.req.header('If-None-Match') ?? ''
-      if (ifNoneMatchHeader === global.iconHash[user.id]) {
-        return c.body(null, 304, {})
       }
 
       const [[icon]] = await conn
@@ -39,17 +39,22 @@ export const getIconHandler = [
         )
         .catch(throwErrorWith('failed to get icon'))
       if (!icon) {
+        await conn.rollback()
         return c.body(await c.get('runtime').fallbackUserIcon(), 200, {
           'Content-Type': 'image/jpeg',
         })
       }
 
+      await conn.commit().catch(throwErrorWith('failed to commit'))
+
       return c.body(icon.image, 200, {
         'Content-Type': 'image/jpeg',
       })
     } catch (error) {
+      await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
+      // await conn.rollback()
       conn.release()
     }
   },
@@ -72,18 +77,12 @@ export const postIconHandler = [
         .execute('DELETE FROM icons WHERE user_id = ?', [userId])
         .catch(throwErrorWith('failed to delete old user icon'))
 
-      const imageBuffer = Buffer.from(body.image, 'base64')
       const [{ insertId: iconId }] = await conn
         .query<ResultSetHeader>(
           'INSERT INTO icons (user_id, image) VALUES (?, ?)',
-          [userId, imageBuffer],
+          [userId, Buffer.from(body.image, 'base64')],
         )
         .catch(throwErrorWith('failed to insert icon'))
-
-      const iconHash = createHash('sha256')
-        .update(new Uint8Array(imageBuffer))
-        .digest('hex')
-      global.iconHash[userId] = iconHash
 
       await conn.commit().catch(throwErrorWith('failed to commit'))
 
@@ -92,7 +91,7 @@ export const postIconHandler = [
       await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
+      // await conn.rollback()
       conn.release()
     }
   },
@@ -133,7 +132,7 @@ export const getMeHandler = [
       await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
+      // await conn.rollback()
       conn.release()
     }
   },
@@ -210,7 +209,7 @@ export const registerHandler = async (
     await conn.rollback()
     return c.text(`Internal Server Error\n${error}`, 500)
   } finally {
-    await conn.rollback()
+    // await conn.rollback()
     conn.release()
   }
 }
@@ -266,7 +265,7 @@ export const loginHandler = async (
     await conn.rollback()
     return c.text(`Internal Server Error\n${error}`, 500)
   } finally {
-    await conn.rollback()
+    // await conn.rollback()
     conn.release()
   }
 }
@@ -306,7 +305,7 @@ export const getUserHandler = [
       await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
+      // await conn.rollback()
       conn.release()
     }
   },
