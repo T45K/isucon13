@@ -34,6 +34,10 @@ export const fillUserResponse = async (
     image = await getFallbackUserIcon()
   }
 
+  const iconHash =
+    global.iconHash[user.id] ??
+    createHash('sha256').update(new Uint8Array(image)).digest('hex')
+
   return {
     id: user.id,
     name: user.name,
@@ -43,6 +47,6 @@ export const fillUserResponse = async (
       id: theme.id,
       dark_mode: !!theme.dark_mode,
     },
-    icon_hash: createHash('sha256').update(new Uint8Array(image)).digest('hex'),
+    icon_hash: iconHash,
   } satisfies UserResponse
 }
