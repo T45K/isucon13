@@ -1,15 +1,10 @@
-import { Context } from 'hono'
-import { RowDataPacket } from 'mysql2/promise'
-import { HonoEnvironment } from '../types/application'
-import { verifyUserSessionMiddleware } from '../middlewares/verify-user-session-middleare'
-import { throwErrorWith } from '../utils/throw-error-with'
-import {
-  LivecommentsModel,
-  LivestreamsModel,
-  ReactionsModel,
-  UserModel,
-} from '../types/models'
-import { atoi } from '../utils/integer'
+import {Context} from 'hono'
+import {RowDataPacket} from 'mysql2/promise'
+import {HonoEnvironment} from '../types/application'
+import {verifyUserSessionMiddleware} from '../middlewares/verify-user-session-middleare'
+import {throwErrorWith} from '../utils/throw-error-with'
+import {LivecommentsModel, LivestreamsModel, ReactionsModel, UserModel,} from '../types/models'
+import {atoi} from '../utils/integer' // GET /api/user/:username/statistics
 
 // GET /api/user/:username/statistics
 export const getUserStatisticsHandler = [
@@ -45,30 +40,34 @@ export const getUserStatisticsHandler = [
         const [[{ 'COUNT(*)': reaction }]] = await conn
           .query<({ 'COUNT(*)': number } & RowDataPacket)[]>(
             `
-              SELECT COUNT(*) FROM users u
-              INNER JOIN livestreams l ON l.user_id = u.id
-              INNER JOIN reactions r ON r.livestream_id = l.id
-              WHERE u.id = ?
-            `,
+                            SELECT COUNT(*)
+                            FROM users u
+                                     INNER JOIN livestreams l ON l.user_id = u.id
+                                     INNER JOIN reactions r ON r.livestream_id = l.id
+                            WHERE u.id = ?
+                        `,
             [user.id],
           )
           .catch(throwErrorWith('failed to count reactions'))
 
         const [[{ 'IFNULL(SUM(l2.tip), 0)': tips }]] = await conn
-          .query<({ 'IFNULL(SUM(l2.tip), 0)': number } & RowDataPacket)[]>(
+          .query<
+            ({ 'IFNULL(SUM(l2.tip), 0)': string | number } & RowDataPacket)[]
+          >(
             `
-              SELECT IFNULL(SUM(l2.tip), 0) FROM users u
-              INNER JOIN livestreams l ON l.user_id = u.id	
-              INNER JOIN livecomments l2 ON l2.livestream_id = l.id
-              WHERE u.id = ?
-            `,
+                            SELECT IFNULL(SUM(l2.tip), 0)
+                            FROM users u
+                                     INNER JOIN livestreams l ON l.user_id = u.id
+                                     INNER JOIN livecomments l2 ON l2.livestream_id = l.id
+                            WHERE u.id = ?
+                        `,
             [user.id],
           )
           .catch(throwErrorWith('failed to count tips'))
 
         ranking.push({
           username: user.name,
-          score: reaction + tips,
+          score: reaction + Number(tips),
         })
       }
 
@@ -89,11 +88,12 @@ export const getUserStatisticsHandler = [
       const [[{ 'COUNT(*)': totalReactions }]] = await conn
         .query<({ 'COUNT(*)': number } & RowDataPacket)[]>(
           `
-            SELECT COUNT(*) FROM users u 
-            INNER JOIN livestreams l ON l.user_id = u.id 
-            INNER JOIN reactions r ON r.livestream_id = l.id
-            WHERE u.name = ?
-          `,
+                        SELECT COUNT(*)
+                        FROM users u
+                                 INNER JOIN livestreams l ON l.user_id = u.id
+                                 INNER JOIN reactions r ON r.livestream_id = l.id
+                        WHERE u.name = ?
+                    `,
           [username],
         )
         .catch(throwErrorWith('failed to count reactions'))
@@ -103,7 +103,9 @@ export const getUserStatisticsHandler = [
       let totalTip = 0
       const [livestreams] = await conn
         .query<(LivestreamsModel & RowDataPacket)[]>(
-          `SELECT * FROM livestreams WHERE user_id = ?`,
+          `SELECT *
+                     FROM livestreams
+                     WHERE user_id = ?`,
           [user.id],
         )
         .catch(throwErrorWith('failed to get livestreams'))
@@ -111,7 +113,9 @@ export const getUserStatisticsHandler = [
       for (const livestream of livestreams) {
         const [livecomments] = await conn
           .query<(LivecommentsModel & RowDataPacket)[]>(
-            `SELECT * FROM livecomments WHERE livestream_id = ?`,
+            `SELECT *
+                         FROM livecomments
+                         WHERE livestream_id = ?`,
             [livestream.id],
           )
           .catch(throwErrorWith('failed to get livecomments'))
@@ -127,7 +131,9 @@ export const getUserStatisticsHandler = [
       for (const livestream of livestreams) {
         const [[{ 'COUNT(*)': livestreamViewerCount }]] = await conn
           .query<({ 'COUNT(*)': number } & RowDataPacket)[]>(
-            `SELECT COUNT(*) FROM livestream_viewers_history WHERE livestream_id = ?`,
+            `SELECT COUNT(*)
+                         FROM livestream_viewers_history
+                         WHERE livestream_id = ?`,
             [livestream.id],
           )
           .catch(throwErrorWith('failed to get livestream_view_history'))
@@ -139,15 +145,14 @@ export const getUserStatisticsHandler = [
       const [[favoriteEmoji]] = await conn
         .query<(Pick<ReactionsModel, 'emoji_name'> & RowDataPacket)[]>(
           `
-            SELECT r.emoji_name
-            FROM users u
-            INNER JOIN livestreams l ON l.user_id = u.id
-            INNER JOIN reactions r ON r.livestream_id = l.id
-            WHERE u.name = ?
-            GROUP BY emoji_name
-            ORDER BY COUNT(*) DESC, emoji_name DESC
-            LIMIT 1
-          `,
+                        SELECT r.emoji_name
+                        FROM users u
+                                 INNER JOIN livestreams l ON l.user_id = u.id
+                                 INNER JOIN reactions r ON r.livestream_id = l.id
+                        WHERE u.name = ?
+                        GROUP BY emoji_name
+                        ORDER BY COUNT(*) DESC, emoji_name DESC LIMIT 1
+                    `,
           [username],
         )
         .catch(throwErrorWith('failed to get favorite emoji'))
@@ -212,7 +217,9 @@ export const getLivestreamStatisticsHandler = [
       }[] = []
       for (const livestream of livestreams) {
         const [[{ 'COUNT(*)': reactionCount }]] = await conn
-          .query<({ 'COUNT(*)': number } & RowDataPacket)[]>(
+          .query<
+            ({ 'IFNULL(SUM(l2.tip), 0)': number | string } & RowDataPacket)[]
+          >(
             'SELECT COUNT(*) FROM livestreams l INNER JOIN reactions r ON l.id = r.livestream_id WHERE l.id = ?',
             [livestream.id],
           )
@@ -228,7 +235,7 @@ export const getLivestreamStatisticsHandler = [
         ranking.push({
           livestreamId: livestream.id,
           title: livestream.title,
-          score: reactionCount + totalTip,
+          score: reactionCount + Number(totalTip),
         })
       }
       ranking.sort((a, b) => {
