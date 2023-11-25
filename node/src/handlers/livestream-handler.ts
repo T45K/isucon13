@@ -296,7 +296,7 @@ export const searchLivestreamsHandler = async (
 
     return c.json(livestreamResponses)
   } catch (error) {
-    return c.text(`Internal Server Error\n${error}`, 500)
+    return c.text(`Internal Server Error\n${error} ${error.stack}`, 500)
   } finally {
     conn.release()
   }
