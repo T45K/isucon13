@@ -88,7 +88,7 @@ const pool = createPool({
   // host: process.env['ISUCON13_MYSQL_DIALCONFIG_ADDRESS'] ?? '127.0.0.1',
   host: '192.168.0.12', // mysql 専用のサーバーの、ローカル ip アドレス
   port: Number(process.env['ISUCON13_MYSQL_DIALCONFIG_PORT'] ?? '3306'),
-  connectionLimit: 10,
+  connectionLimit: 150, // max_connections was 151 by default
 })
 
 if (!process.env['ISUCON13_POWERDNS_SUBDOMAIN_ADDRESS']) {
