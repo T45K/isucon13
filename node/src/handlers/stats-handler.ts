@@ -138,7 +138,7 @@ export const getUserStatisticsHandler = [
 
       // 合計視聴者数
       let viewersCount = 0
-      for (const livestream of livestreams) {
+      for (const livestream of livestreamsByUserId[user.id]) {
         const [[{ 'COUNT(*)': livestreamViewerCount }]] = await conn
           .query<({ 'COUNT(*)': number } & RowDataPacket)[]>(
             `SELECT COUNT(*)
