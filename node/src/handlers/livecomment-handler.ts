@@ -80,7 +80,7 @@ export const getNgwords = [
     }
 
     const conn = await c.get('pool').getConnection()
-    await conn.beginTransaction()
+    // await conn.beginTransaction()
 
     try {
       const [ngwords] = await conn
@@ -102,10 +102,10 @@ export const getNgwords = [
         })),
       )
     } catch (error) {
-      await conn.rollback()
+      // await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
+      // await conn.rollback()
       conn.release()
     }
   },
