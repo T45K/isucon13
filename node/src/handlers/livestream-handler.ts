@@ -48,7 +48,7 @@ export const reserveLivestreamHandler = [
       const reserveEndAt = body.end_at * 1000
 
       if (reserveStartAt >= termEndAt || reserveEndAt <= termStartAt) {
-        // await conn.rollback()
+        await conn.rollback()
         return c.text('bad reservation time range', 400)
       }
 
