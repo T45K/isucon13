@@ -109,22 +109,22 @@ export const reserveLivestreamHandler = [
         .catch(throwErrorWith('failed to insert livestream'))
 
       // タグ追加
-      // for (const tagId of body.tags) {
-      //   await conn
-      //     .execute(
-      //       'INSERT INTO livestream_tags (livestream_id, tag_id) VALUES (?, ?)',
-      //       [livestreamId, tagId],
-      //     )
-      //     .catch(throwErrorWith('failed to insert livestream tag'))
-      // }
-      // N+1 にならないように書き換え
-      const tagIds = body.tags
+      for (const tagId of body.tags) {
         await conn
-            .query(
-                'INSERT INTO livestream_tags (livestream_id, tag_id) VALUES ?',
-                [tagIds.map((tagId) => [livestreamId, tagId])],
-            )
-            .catch(throwErrorWith('failed to insert livestream tags'))
+          .execute(
+            'INSERT INTO livestream_tags (livestream_id, tag_id) VALUES (?, ?)',
+            [livestreamId, tagId],
+          )
+          .catch(throwErrorWith('failed to insert livestream tag'))
+      }
+      // N+1 にならないように書き換え
+      // const tagIds = body.tags
+      //   await conn
+      //       .query(
+      //           'INSERT INTO livestream_tags (livestream_id, tag_id) VALUES ?',
+      //           [tagIds.map((tagId) => [livestreamId, tagId])],
+      //       )
+      //       .catch(throwErrorWith('failed to insert livestream tags'))
 
 
       const response = await fillLivestreamResponse(
