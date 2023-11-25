@@ -35,11 +35,14 @@ export const getUserStatisticsHandler = [
         .query<(UserModel & RowDataPacket)[]>('SELECT * FROM users')
         .catch(throwErrorWith('failed to get users'))
 
-      const [livestreams] = await conn
+      let [livestreams] = await conn
         .query<(LivestreamsModel & RowDataPacket)[]>(
           'SELECT * FROM livestreams',
         )
         .catch(throwErrorWith('failed to get users'))
+      if (!livestreams) {
+        livestreams = []
+      }
 
       const livestreamsByUserId: { [key: number]: LivestreamsModel[] } = {}
       // livestreamsをuser_idでグルーピングする
@@ -179,7 +182,7 @@ export const getUserStatisticsHandler = [
       })
     } catch (error) {
       await conn.rollback()
-      return c.text(`Internal Server Error\n${error}`, 500)
+      return c.text(`Internal Server Error\n${error}}`, 500)
     } finally {
       await conn.rollback()
       conn.release()
