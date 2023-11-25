@@ -45,7 +45,7 @@ export const fillLivestreamResponse = async (
   //   tags.push(tag)
   // }
 
-  const [tags] = await conn.query<(TagsModel & RowDataPacket)[]>(
+  const [[tags]] = await conn.query<(TagsModel & RowDataPacket)[]>(
       'SELECT * FROM tags WHERE id IN (?) ORDER BY id DESC',
       [livestreamTags.map(livestreamTag => livestreamTag.tag_id)],
   );
