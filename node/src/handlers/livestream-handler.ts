@@ -154,8 +154,11 @@ export const searchLivestreamsHandler = async (
 
   try {
     let livestreams: (LivestreamsModel & RowDataPacket)[]
-    let tagsByLivestreamId: {
-      [key: number]: TagsModel[]
+    let tagById: {
+      [key: number]: TagsModel
+    } = {}
+    let tagIdsByLivestreamId: {
+      [key: number]: number[]
     } = {}
 
     if (keyTagName) {
@@ -167,12 +170,9 @@ export const searchLivestreamsHandler = async (
         )
         .catch(throwErrorWith('failed to get tag'))
 
-      // tagをlivestream_idごとにグルーピング
+      // tagをidごとにグルーピング
       for (const tag of tags) {
-        if (!tagsByLivestreamId[tag.livestreamId]) {
-          tagsByLivestreamId[tag.livestreamId] = []
-        }
-        tagsByLivestreamId[tag.livestreamId].push(tag)
+        tagById[tag.id] = tag
       }
 
       const [livestreamTags] = await conn
@@ -181,6 +181,13 @@ export const searchLivestreamsHandler = async (
           [tags.map((tag) => tag.id)],
         )
         .catch(throwErrorWith('failed to get keyTaggedLivestreams'))
+
+      for (const livestreamTag of livestreamTags) {
+        if (!tagIdsByLivestreamId[livestreamTag.id]) {
+          tagIdsByLivestreamId[livestreamTag.id] = []
+        }
+        tagIdsByLivestreamId[livestreamTag.id].push(livestreamTag.tag_id)
+      }
 
       const [results] = await conn
         .query<(LivestreamsModel & RowDataPacket)[]>(
@@ -272,7 +279,11 @@ export const searchLivestreamsHandler = async (
         icon_hash: iconHash,
       } satisfies UserResponse
 
-      const tags = tagsByLivestreamId[livestream.id] ?? []
+      const tagIds = tagIdsByLivestreamId[livestream.id] ?? []
+      const tags = []
+      for (let tagId of tagIds) {
+        tags.push(tagById[tagId])
+      }
 
       const response = {
         id: livestream.id,
