@@ -274,7 +274,7 @@ export const searchLivestreamsHandler = async (
 
       const tags = tagsByLivestreamId[livestream.id] ?? []
 
-      c.json({
+      const response = {
         id: livestream.id,
         owner: userResponse,
         title: livestream.title,
@@ -284,14 +284,9 @@ export const searchLivestreamsHandler = async (
         thumbnail_url: livestream.thumbnail_url,
         start_at: livestream.start_at,
         end_at: livestream.end_at,
-      })
+      } satisfies LivestreamResponse
 
-      const livestreamResponse = await fillLivestreamResponse(
-        conn,
-        livestream,
-        c.get('runtime').fallbackUserIcon,
-      ).catch(throwErrorWith('failed to fill livestream'))
-      livestreamResponses.push(livestreamResponse)
+      livestreamResponses.push(response)
     }
 
     return c.json(livestreamResponses)
