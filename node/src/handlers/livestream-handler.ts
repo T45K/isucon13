@@ -215,10 +215,12 @@ export const searchLivestreamsHandler = async (
       .catch(throwErrorWith('failed to get keyTaggedLivestreams'))
 
     for (const livestreamTag of livestreamTags) {
-      if (!tagIdsByLivestreamId[livestreamTag.id]) {
-        tagIdsByLivestreamId[livestreamTag.id] = []
+      if (!tagIdsByLivestreamId[livestreamTag.livestream_id]) {
+        tagIdsByLivestreamId[livestreamTag.livestream_id] = []
       }
-      tagIdsByLivestreamId[livestreamTag.id].push(livestreamTag.tag_id)
+      tagIdsByLivestreamId[livestreamTag.livestream_id].push(
+        livestreamTag.tag_id,
+      )
     }
 
     const [tags] = await conn
