@@ -5,7 +5,8 @@ import {defaultSessionExpiresKey, defaultUserIDKey, defaultUserNameKey,} from '.
 import {verifyUserSessionMiddleware} from '../middlewares/verify-user-session-middleare'
 import {fillUserResponse} from '../utils/fill-user-response'
 import {throwErrorWith} from '../utils/throw-error-with'
-import {IconModel, UserModel} from '../types/models' // GET /api/user/:username/icon
+import {IconModel, UserModel} from '../types/models'
+import {createHash} from 'node:crypto' // GET /api/user/:username/icon
 
 // GET /api/user/:username/icon
 export const getIconHandler = [
@@ -77,12 +78,18 @@ export const postIconHandler = [
         .execute('DELETE FROM icons WHERE user_id = ?', [userId])
         .catch(throwErrorWith('failed to delete old user icon'))
 
+      const imageBuffer = Buffer.from(body.image, 'base64')
       const [{ insertId: iconId }] = await conn
         .query<ResultSetHeader>(
           'INSERT INTO icons (user_id, image) VALUES (?, ?)',
-          [userId, Buffer.from(body.image, 'base64')],
+          [userId, imageBuffer],
         )
         .catch(throwErrorWith('failed to insert icon'))
+
+      const iconHash = createHash('sha256')
+        .update(new Uint8Array(imageBuffer))
+        .digest('hex')
+      global.iconHash[userId] = iconHash
 
       await conn.commit().catch(throwErrorWith('failed to commit'))
 
