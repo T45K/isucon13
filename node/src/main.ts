@@ -86,7 +86,7 @@ const pool = createPool({
   password: process.env['ISUCON13_MYSQL_DIALCONFIG_PASSWORD'] ?? 'isucon',
   database: process.env['ISUCON13_MYSQL_DIALCONFIG_DATABASE'] ?? 'isupipe',
   // host: process.env['ISUCON13_MYSQL_DIALCONFIG_ADDRESS'] ?? '127.0.0.1',
-  host: '54.248.127.100', // mysql 専用のサーバー ip
+  host: '192.168.0.12', // mysql 専用のサーバーの、ローカル ip アドレス
   port: Number(process.env['ISUCON13_MYSQL_DIALCONFIG_PORT'] ?? '3306'),
   connectionLimit: 10,
 })
