@@ -28,7 +28,7 @@ export const getLivecommentsHandler = [
     }
 
     const conn = await c.get('pool').getConnection()
-    await conn.beginTransaction()
+    // await conn.beginTransaction()
 
     try {
       let query =
@@ -58,10 +58,10 @@ export const getLivecommentsHandler = [
       await conn.commit().catch(throwErrorWith('failed to commit'))
       return c.json(livecommnetResponses)
     } catch (error) {
-      await conn.rollback()
+      // await conn.rollback()
       return c.text(`Internal Server Error\n${error}`, 500)
     } finally {
-      await conn.rollback()
+      // await conn.rollback()
       conn.release()
     }
   },
