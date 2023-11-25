@@ -110,21 +110,33 @@ export const getUserStatisticsHandler = [
         )
         .catch(throwErrorWith('failed to get livestreams'))
 
-      for (const livestream of livestreams) {
-        const [livecomments] = await conn
-          .query<(LivecommentsModel & RowDataPacket)[]>(
-            `SELECT *
-                         FROM livecomments
-                         WHERE livestream_id = ?`,
-            [livestream.id],
+      // for (const livestream of livestreams) {
+      //   const [livecomments] = await conn
+      //     .query<(LivecommentsModel & RowDataPacket)[]>(
+      //       `SELECT *
+      //                    FROM livecomments
+      //                    WHERE livestream_id = ?`,
+      //       [livestream.id],
+      //     )
+      //     .catch(throwErrorWith('failed to get livecomments'))
+      //
+      //   for (const livecomment of livecomments) {
+      //     totalTip += livecomment.tip
+      //     totalLivecomments++
+      //   }
+      // }
+      // liestreamを一括で取得
+      const livestreamIds = livestreams.map(livestream => livestream.id);
+      const [livecomments] = await conn.query<(LivecommentsModel & RowDataPacket)[]>(
+              `SELECT * FROM livecomments WHERE livestream_id IN (?)`,
+              [livestreamIds],
           )
-          .catch(throwErrorWith('failed to get livecomments'))
+          .catch(throwErrorWith('failed to get livecomments'));
 
-        for (const livecomment of livecomments) {
-          totalTip += livecomment.tip
-          totalLivecomments++
-        }
+      for (const livecomment of livecomments) {
+        totalTip += livecomment.tip;
       }
+      totalLivecomments = livecomments.length;
 
       // 合計視聴者数
       let viewersCount = 0
