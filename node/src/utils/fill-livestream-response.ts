@@ -36,14 +36,19 @@ export const fillLivestreamResponse = async (
     (LivestreamTagsModel & RowDataPacket)[]
   >('SELECT * FROM livestream_tags WHERE livestream_id = ?', [livestream.id])
 
-  const tags: TagsModel[] = []
-  for (const livestreamTag of livestreamTags) {
-    const [[tag]] = await conn.query<(TagsModel & RowDataPacket)[]>(
-      'SELECT * FROM tags WHERE id = ?',
-      [livestreamTag.tag_id],
-    )
-    tags.push(tag)
-  }
+  // const tags: TagsModel[] = []
+  // for (const livestreamTag of livestreamTags) {
+  //   const [[tag]] = await conn.query<(TagsModel & RowDataPacket)[]>(
+  //     'SELECT * FROM tags WHERE id = ?',
+  //     [livestreamTag.tag_id],
+  //   )
+  //   tags.push(tag)
+  // }
+
+  const [[tags]] = await conn.query<(TagsModel & RowDataPacket)[]>(
+      'SELECT * FROM tags WHERE id IN (?) ORDER BY id DESC',
+      [livestreamTags.map(livestreamTag => livestreamTag.tag_id)],
+  );
 
   return {
     id: livestream.id,
